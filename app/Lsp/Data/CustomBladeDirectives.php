@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModuleProviderPatterns;
 
 class CustomBladeDirectives implements DataProvider
 {
@@ -62,8 +63,8 @@ class CustomBladeDirectives implements DataProvider
      */
     public function patterns(): array
     {
-        return [
+        return ModuleProviderPatterns::merge([
             'app/{,*,**/*}Provider.php',
-        ];
+        ]);
     }
 }

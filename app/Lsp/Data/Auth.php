@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModuleProviderPatterns;
 
 class Auth implements DataProvider
 {
@@ -55,10 +56,10 @@ class Auth implements DataProvider
      */
     public function patterns(): array
     {
-        return [
+        return ModuleProviderPatterns::merge([
             'app/Providers/{,*,**/*}.php',
             'app/Models/{,*,**/*}.php',
             'app/Policies/{,*,**/*}.php',
-        ];
+        ]);
     }
 }

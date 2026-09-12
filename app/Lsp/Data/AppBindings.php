@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModuleProviderPatterns;
 use Illuminate\Support\Collection;
 
 class AppBindings implements DataProvider
@@ -53,8 +54,8 @@ class AppBindings implements DataProvider
      */
     public function patterns(): array
     {
-        return [
+        return ModuleProviderPatterns::merge([
             'app/Providers/{,*,**/*}.php',
-        ];
+        ]);
     }
 }

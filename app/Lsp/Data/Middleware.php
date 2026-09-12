@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModuleProviderPatterns;
 use Illuminate\Support\Collection;
 
 class Middleware implements DataProvider
@@ -53,9 +54,9 @@ class Middleware implements DataProvider
      */
     public function patterns(): array
     {
-        return [
+        return ModuleProviderPatterns::merge([
             'app/Http/Kernel.php',
             'bootstrap/app.php',
-        ];
+        ]);
     }
 }

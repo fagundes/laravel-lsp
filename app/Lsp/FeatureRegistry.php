@@ -78,6 +78,7 @@ use App\Lsp\Features\Views\ViewDiagnosticProvider;
 use App\Lsp\Features\Views\ViewHoverProvider;
 use App\Lsp\Features\Views\ViewLinkProvider;
 use App\Lsp\Watchers\DataProviderWatcher;
+use App\Lsp\Watchers\MixinHelperWatcher;
 use App\Lsp\Watchers\PestHelperWatcher;
 use Illuminate\Container\Container;
 
@@ -197,6 +198,7 @@ class FeatureRegistry
      */
     public array $watchers = [
         DataProviderWatcher::class,
+        MixinHelperWatcher::class,
         PestHelperWatcher::class,
     ];
 
@@ -271,7 +273,7 @@ class FeatureRegistry
     /**
      * Resolve given classes from the container.
      *
-     * @param array<int, class-string> $classes
+     * @param  array<int, class-string>  $classes
      * @return array<int, mixed>
      */
     protected function resolve(array $classes): array

@@ -30,6 +30,10 @@ class Controllers implements DataProvider
         return [
             'app/Http/Controllers/*.php',
             'app/Http/Controllers/**/*.php',
+            'Modules/*/app/Http/Controllers/*.php',
+            'Modules/*/app/Http/Controllers/**/*.php',
+            'Modules/*/Http/Controllers/*.php',
+            'Modules/*/Http/Controllers/**/*.php',
         ];
     }
 
@@ -40,17 +44,34 @@ class Controllers implements DataProvider
      */
     public function get(): Collection
     {
-        $path = $this->project->path('app/Http/Controllers');
+        $paths = $this->controllerPaths();
 
-        if (!is_dir($path)) {
+        if ($paths === []) {
             return collect();
         }
 
-        return collect(Finder::create()->files()->name('*.php')->in($path))
+        return collect(Finder::create()->files()->name('*.php')->in($paths))
             ->filter(fn (SplFileInfo $file): bool => $file->getSize() <= 50_000)
             ->flatMap(fn (SplFileInfo $file): array => $this->actionsIn((string) file_get_contents($file->getRealPath() ?: $file->getPathname())))
             ->unique()
             ->values();
+    }
+
+    /**
+     * Get conventional application and module controller directories.
+     *
+     * @return array<int, string>
+     */
+    protected function controllerPaths(): array
+    {
+        return collect([
+            $this->project->path('app/Http/Controllers'),
+            ...(glob($this->project->path('Modules/*/app/Http/Controllers'), GLOB_ONLYDIR) ?: []),
+            ...(glob($this->project->path('Modules/*/Http/Controllers'), GLOB_ONLYDIR) ?: []),
+        ])->filter(fn (string $path): bool => is_dir($path))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

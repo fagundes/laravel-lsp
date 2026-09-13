@@ -59,6 +59,7 @@ class Models implements DataProvider
     {
         return [
             'app/{,*,**/*}.php',
+            'Modules/*/{app/Models,Entities,Models}/{,*,**/*}.php',
             'database/migrations/{,*,**/*}.php',
             'composer.json',
             'composer.lock',

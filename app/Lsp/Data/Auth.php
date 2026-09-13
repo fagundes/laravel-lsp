@@ -60,6 +60,7 @@ class Auth implements DataProvider
             'app/Providers/{,*,**/*}.php',
             'app/Models/{,*,**/*}.php',
             'app/Policies/{,*,**/*}.php',
+            'Modules/*/{app/Models,Entities,Models}/{,*,**/*}.php',
         ]);
     }
 }

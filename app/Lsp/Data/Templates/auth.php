@@ -18,11 +18,13 @@ if (!App::bound('auth')) {
         'policies'        => (object) [],
     ]);
 } else {
-    if (File::isDirectory(base_path('app/Models'))) {
-        collect(File::allFiles(base_path('app/Models')))
+    collect([base_path('app/Models')])
+        ->merge(LspHelper::modulePaths('model', ['app/Models', 'Entities', 'Models']))
+        ->filter(fn ($directory) => File::isDirectory($directory))
+        ->unique()
+        ->each(fn ($directory) => collect(File::allFiles($directory))
             ->filter(fn (SplFileInfo $file) => $file->getExtension() === 'php')
-            ->each(fn ($file) => include_once ($file));
-    }
+            ->each(fn ($file) => include_once ($file)));
 
     $modelPolicies = collect(get_declared_classes())
         ->filter(fn ($class) => is_subclass_of($class, Model::class))

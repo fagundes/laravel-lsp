@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Symfony\Component\Finder\SplFileInfo;
 
 $local = collect(File::allFiles(config_path()))
@@ -24,8 +25,40 @@ $vendor = collect(glob(base_path('vendor/**/**/config/*.php')))->map(fn (
     $path,
 ]);
 
+$moduleConfigPath = config('modules.paths.generator.config.path', 'config');
+$modulesRoot = config('modules.paths.modules', base_path('Modules'));
+
+$moduleDirectories = app()->bound('modules')
+    ? collect(app('modules')->all())->map(fn ($module) => [
+        'name' => $module->getName(),
+        'path' => $module->getPath(),
+    ])
+    : collect(is_string($modulesRoot) && is_dir($modulesRoot) ? File::directories($modulesRoot) : [])
+        ->map(fn (string $path) => [
+            'name' => basename($path),
+            'path' => $path,
+        ]);
+
+$modules = $moduleDirectories->flatMap(function (array $module) use ($moduleConfigPath) {
+    $directories = collect([
+        is_string($moduleConfigPath) ? $module['path'] . DIRECTORY_SEPARATOR . $moduleConfigPath : null,
+        $module['path'] . DIRECTORY_SEPARATOR . 'config',
+        $module['path'] . DIRECTORY_SEPARATOR . 'Config',
+    ])->filter(fn ($path) => is_string($path) && is_dir($path))->unique();
+
+    return $directories->flatMap(fn (string $directory) => collect(File::files($directory))
+        ->filter(fn (SplFileInfo $file) => $file->getExtension() === 'php')
+        ->map(function (SplFileInfo $file) use ($module) {
+            $basename = $file->getBasename('.php');
+            $key = $basename === 'config' ? Str::lower($module['name']) : $basename;
+
+            return [$key, $file->getPathname()];
+        }));
+});
+
 $configPaths = $local
     ->merge($vendor)
+    ->merge($modules)
     ->groupBy(0)
     ->map(fn ($items) =>$items->pluck(1));
 

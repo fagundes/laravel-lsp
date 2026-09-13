@@ -69,6 +69,8 @@ class Configs implements DataProvider
     {
         return [
             'config/{,*,**/*}.php',
+            'Modules/*/config/{,*,**/*}.php',
+            'Modules/*/Config/{,*,**/*}.php',
             '.env',
         ];
     }

@@ -7,8 +7,8 @@ namespace App\Lsp\Features\Views;
 use App\Lsp\CodeActions\CodeActionContext;
 use App\Lsp\Contracts\CodeActionProvider;
 use App\Lsp\Document;
-use App\Lsp\Support\FileUri;
 use App\Lsp\Project;
+use App\Lsp\Support\FileUri;
 
 class ViewCodeActionProvider implements CodeActionProvider
 {
@@ -50,18 +50,32 @@ class ViewCodeActionProvider implements CodeActionProvider
             return [];
         }
 
-        return [$this->createViewAction($missing, $diagnostic)];
+        $action = $this->createViewAction($missing, $diagnostic);
+
+        return $action === null ? [] : [$action];
     }
 
     /**
      * Create the view file code action.
      *
      * @param  array<string, mixed>  $diagnostic
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null
      */
-    protected function createViewAction(string $missing, array $diagnostic): array
+    protected function createViewAction(string $missing, array $diagnostic): ?array
     {
-        $relativePath = 'resources/views/' . str_replace('.', '/', $missing) . '.blade.php';
+        [$namespace, $view] = str_contains($missing, '::')
+            ? explode('::', $missing, 2)
+            : [null, $missing];
+
+        $root = $namespace === null
+            ? 'resources/views'
+            : $this->namespaceRoot($namespace);
+
+        if ($root === null) {
+            return null;
+        }
+
+        $relativePath = rtrim($root, '/') . '/' . str_replace('.', '/', $view) . '.blade.php';
         $uri = (string) FileUri::fromPath($this->project->path($relativePath));
 
         return [
@@ -84,5 +98,19 @@ class ViewCodeActionProvider implements CodeActionProvider
                 'arguments' => [$uri, 1, 0],
             ],
         ];
+    }
+
+    /**
+     * Get the first non-vendor root for a view namespace.
+     */
+    protected function namespaceRoot(string $namespace): ?string
+    {
+        foreach ($this->project->index->viewNamespaces()[$namespace] ?? [] as $root) {
+            if (!($root['isVendor'] ?? false) && is_string($root['path'] ?? null)) {
+                return $root['path'];
+            }
+        }
+
+        return null;
     }
 }

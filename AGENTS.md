@@ -36,7 +36,7 @@ It provides completion, hover, diagnostic, link, and code-action behavior.
 ## Custom Requests
 
 - `laravel/data` returns indexed project facts to the client. It takes a `name` parameter and responds with that provider's data, loading it on first use.
-- Valid names are the `ProjectIndex` provider keys: `appBindings`, `assets`, `auth`, `bladeComponents`, `configs`, `controllers`, `customBladeDirectives`, `debugInfo`, `env`, `inertiaViews`, `middleware`, `mixManifest`, `models`, `paths`, `routes`, `tests`, `translations`, `views`.
+- Valid names are the `ProjectIndex` provider keys: `appBindings`, `assets`, `auth`, `bladeComponents`, `configs`, `controllers`, `customBladeDirectives`, `debugInfo`, `env`, `inertiaViews`, `middleware`, `mixManifest`, `models`, `paths`, `routes`, `tests`, `translations`, `viewNamespaces`, `views`.
 
 ## LSP PHP Templates
 

@@ -22,6 +22,7 @@ use App\Lsp\Data\Paths;
 use App\Lsp\Data\Routes;
 use App\Lsp\Data\Tests;
 use App\Lsp\Data\Translations;
+use App\Lsp\Data\ViewNamespaces;
 use App\Lsp\Data\Views;
 use App\Lsp\Exceptions\DataProviderNotFoundException;
 use App\Lsp\Support\Pattern;
@@ -53,6 +54,7 @@ class ProjectIndex
         'routes' => Routes::class,
         'tests' => Tests::class,
         'translations' => Translations::class,
+        'viewNamespaces' => ViewNamespaces::class,
         'views' => Views::class,
     ];
 
@@ -211,6 +213,16 @@ class ProjectIndex
      * Get the views provider.
      */
     public function views(): Collection
+    {
+        return $this->get(__FUNCTION__);
+    }
+
+    /**
+     * Get the view namespace roots.
+     *
+     * @return array<string, array<int, array{path: string, isVendor: bool}>>
+     */
+    public function viewNamespaces(): array
     {
         return $this->get(__FUNCTION__);
     }

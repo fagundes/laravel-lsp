@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModulePaths;
 
 class Models implements DataProvider
 {
@@ -22,7 +23,13 @@ class Models implements DataProvider
      */
     public function template(): string
     {
-        return file_get_contents(__DIR__ . '/Templates/models.php') ?: '';
+        $template = file_get_contents(__DIR__ . '/Templates/models.php') ?: '';
+
+        return str_replace(
+            ['__LARAVEL_LSP_MODEL_PATHS__', '__LARAVEL_LSP_MODULES_ROOT__', '__LARAVEL_LSP_MODULES_ENABLED__'],
+            [var_export($this->project->modelPaths(), true), var_export($this->project->modulesRoot(), true), $this->project->modulesEnabled() ? 'true' : 'false'],
+            $template,
+        );
     }
 
     /**
@@ -58,8 +65,13 @@ class Models implements DataProvider
     public function patterns(): array
     {
         return [
-            'app/{,*,**/*}.php',
-            'Modules/*/{app/Models,Entities,Models}/{,*,**/*}.php',
+            ...collect($this->project->modelPaths())->map(fn (string $path): string => "{$path}/{,*,**/*}.php"),
+            ...ModulePaths::patterns(
+                $this->project,
+                'models',
+                ['app/Models', 'Entities', 'Models'],
+                '{,*,**/*}.php',
+            ),
             'database/migrations/{,*,**/*}.php',
             'composer.json',
             'composer.lock',

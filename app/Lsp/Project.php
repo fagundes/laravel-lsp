@@ -31,6 +31,43 @@ final class Project
     }
 
     /**
+     * Determine if Laravel module discovery is enabled.
+     */
+    public function modulesEnabled(): bool
+    {
+        return $this->boolean('modulesEnabled', true);
+    }
+
+    /**
+     * Get the configured fallback modules root.
+     */
+    public function modulesRoot(): ?string
+    {
+        $root = $this->data('modulesRoot');
+
+        return is_string($root) && trim($root) !== ''
+            ? str_replace('\\', '/', trim($root, ' /\\'))
+            : null;
+    }
+
+    /**
+     * Get application directories used to discover Eloquent models.
+     *
+     * @return array<int, string>
+     */
+    public function modelPaths(): array
+    {
+        $paths = collect($this->data('modelPaths', ['app/Models']))
+            ->filter(fn (mixed $path): bool => is_string($path) && trim($path) !== '')
+            ->map(fn (string $path): string => str_replace('\\', '/', trim($path, ' /\\')))
+            ->unique()
+            ->values()
+            ->all();
+
+        return $paths === [] ? ['app/Models'] : $paths;
+    }
+
+    /**
      * Get the configured LSP process memory limit.
      */
     public function memoryLimit(): string

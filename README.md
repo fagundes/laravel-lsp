@@ -88,6 +88,27 @@ Enable LSP support in `opencode.json` and add Laravel LSP as a custom server:
 | Validation rules      | Completions                                                 |
 | Controller actions    | Completions, diagnostics, document links                     |
 | Eloquent              | Completions                                                 |
+| Modular applications  | Models, controllers, config, providers, views, and Blade components |
+
+## Modular Applications
+
+Laravel LSP can discover application structure managed by [`nwidart/laravel-modules`](https://github.com/nWidart/laravel-modules). The package is optional and is not a dependency of the language server.
+
+When the Laravel application registers the module repository, the server uses it to resolve the module root, namespace, enabled state, and configured generator paths. If the repository is unavailable, `modulesRoot` is used as an explicit fallback. When `modulesRoot` is empty, the server respects the application's configured module path and finally checks the conventional `Modules` directory.
+
+Module paths extend the conventional Laravel application paths rather than replace them. Both modern and legacy layouts are supported, including `app/Models` and `Entities`, `app/Http/Controllers` and `Http/Controllers`, `app/Providers` and `Providers`, and `config` and `Config`.
+
+### Module Context Request
+
+Editor clients may request the resolved context through the custom `laravel/data` request:
+
+```json
+{
+    "name": "modules"
+}
+```
+
+The response contains `enabled`, `root`, `namespace`, and a `modules` array. Each module includes its name, namespace, enabled state, project-relative path, and resolved generator paths.
 
 ## Configuration
 
@@ -101,6 +122,9 @@ Editor clients pass configuration through the LSP `initializationOptions` object
 | `phpCommand`            | `string[]` | Detected from `phpEnvironment`          | Use an explicit command and arguments, such as `["php"]` or `["./vendor/bin/sail", "php"]`.              |
 | `memoryLimit`           | `string`   | `"512M"`                                | Set the LSP server process `memory_limit` during initialize. Use PHP shorthand such as `"512M"`, `"1G"`, or `"-1"`. |
 | `definitionProvider`    | `boolean`  | `true`                                  | Advertise definition support to the editor. Definitions are resolved from enabled document link options. |
+| `modelPaths`            | `string[]` | `["app/Models"]`                        | Set project-relative application directories used to discover Eloquent models. Module model paths are added separately when module discovery is enabled. |
+| `modulesEnabled`        | `boolean`  | `true`                                  | Discover modules and include their paths in project indexing and file watching.                                  |
+| `modulesRoot`           | `string`   | `""`                                    | Set a project-relative fallback module root. When empty, the server uses the registered module repository or checks `Modules`. |
 | `pestGenerateDocBlocks` | `boolean`  | `true`                                  | Generate Pest helper docblocks and keep them updated when tests or Composer autoload files change.       |
 | `pestHelperFilePath`    | `string`   | `"storage/framework/testing/_pest.php"` | Set the Pest helper output path relative to the Laravel project root.                                    |
 

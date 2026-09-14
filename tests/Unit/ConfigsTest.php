@@ -2,22 +2,13 @@
 
 use App\Lsp\Data\Configs;
 use App\Lsp\Project;
-use App\Lsp\ProjectIndex;
-use App\Lsp\ScriptRunner;
-use App\Lsp\Support\FileUri;
 use App\Lsp\Support\Pattern;
-use Illuminate\Container\Container;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
-function configsProject(string $root): Project
+function configsProject(string $root, array $init = []): Project
 {
-    return new Project(
-        FileUri::fromPath($root),
-        [],
-        new ProjectIndex(new Container),
-        new ScriptRunner($root, ['php']),
-    );
+    return projectWithModulesContext($root, $init);
 }
 
 test('watches modern and legacy module config directories', function () {
@@ -29,16 +20,20 @@ test('watches modern and legacy module config directories', function () {
 });
 
 test('locates values loaded from a module config file', function () {
+    require_once app_path('Lsp/Data/Templates/global.php');
+
     $root = sys_get_temp_dir() . '/lsp-configs-' . getmypid() . '-' . bin2hex(random_bytes(4));
     $module = 'LspConfigFixture' . bin2hex(random_bytes(4));
     $key = Str::lower($module);
     $path = $root . '/Modules/' . $module . '/config/config.php';
+    $originalBasePath = base_path();
     $config = app('config');
     $hadModulesConfig = $config->has('modules');
     $originalModulesConfig = $config->get('modules');
     $outputLevel = ob_get_level();
 
     mkdir(dirname($path), 0777, true);
+    mkdir($root . '/config', 0777, true);
     file_put_contents($path, <<<'PHP'
     <?php
 
@@ -48,20 +43,27 @@ test('locates values loaded from a module config file', function () {
     PHP);
 
     try {
+        app()->setBasePath($root);
         $config->set('modules.paths.modules', $root . '/Modules');
         $config->set($key, ['enabled' => true]);
 
+        $template = (new Configs(configsProject($root, ['modulesRoot' => 'Modules'])))->template();
+        $templatePath = $root . '/configs-template.php';
+        file_put_contents($templatePath, $template);
+
         ob_start();
-        include app_path('Lsp/Data/Templates/configs.php');
+        include $templatePath;
         $data = json_decode((string) ob_get_clean(), true, flags: JSON_THROW_ON_ERROR);
 
         expect(collect($data)->firstWhere('name', $key . '.enabled'))
             ->toMatchArray([
                 'name'  => $key . '.enabled',
                 'value' => true,
-                'file'  => $path,
+                'file'  => 'Modules/' . $module . '/config/config.php',
             ]);
     } finally {
+        app()->setBasePath($originalBasePath);
+
         if (ob_get_level() > $outputLevel) {
             ob_end_clean();
         }

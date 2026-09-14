@@ -3,21 +3,12 @@
 use App\Lsp\Data\Auth;
 use App\Lsp\Data\Models;
 use App\Lsp\Project;
-use App\Lsp\ProjectIndex;
-use App\Lsp\ScriptRunner;
-use App\Lsp\Support\FileUri;
 use App\Lsp\Support\Pattern;
-use Illuminate\Container\Container;
 use Illuminate\Filesystem\Filesystem;
 
 function moduleModelsProject(string $root): Project
 {
-    return new Project(
-        FileUri::fromPath($root),
-        [],
-        new ProjectIndex(new Container),
-        new ScriptRunner($root, [PHP_BINARY]),
-    );
+    return projectWithModulesContext($root);
 }
 
 test('resolves modern and legacy model directories from conventional modules', function () {
@@ -41,7 +32,7 @@ test('resolves modern and legacy model directories from conventional modules', f
         $config->set('modules.paths.modules', $root . '/Modules');
         $config->set('modules.paths.generator.model.path', 'app/Models');
 
-        expect(collect(LspHelper::modulePaths('model', ['app/Models', 'Entities', 'Models']))->sort()->values()->all())
+        expect(collect(LspHelper::modulePaths('models', ['app/Models', 'Entities', 'Models']))->sort()->values()->all())
             ->toBe(collect($directories)->sort()->values()->all());
     } finally {
         if ($hadModulesConfig) {

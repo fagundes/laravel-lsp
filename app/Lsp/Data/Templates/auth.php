@@ -18,8 +18,14 @@ if (!App::bound('auth')) {
         'policies'        => (object) [],
     ]);
 } else {
-    collect([base_path('app/Models')])
-        ->merge(LspHelper::modulePaths('model', ['app/Models', 'Entities', 'Models']))
+    collect(__LARAVEL_LSP_MODEL_PATHS__)
+        ->map(fn ($path) => base_path($path))
+        ->merge(LspHelper::modulePaths(
+            'models',
+            ['app/Models', 'Entities', 'Models'],
+            __LARAVEL_LSP_MODULES_ROOT__,
+            __LARAVEL_LSP_MODULES_ENABLED__,
+        ))
         ->filter(fn ($directory) => File::isDirectory($directory))
         ->unique()
         ->each(fn ($directory) => collect(File::allFiles($directory))

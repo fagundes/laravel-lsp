@@ -2,23 +2,12 @@
 
 use App\Lsp\Data\Controllers;
 use App\Lsp\Project;
-use App\Lsp\ProjectIndex;
-use App\Lsp\ScriptRunner;
-use App\Lsp\Support\FileUri;
 use App\Lsp\Support\Pattern;
-use Illuminate\Container\Container;
 use Illuminate\Filesystem\Filesystem;
 
 function controllersProject(string $root): Project
 {
-    $container = new Container;
-
-    return new Project(
-        FileUri::fromPath($root),
-        [],
-        new ProjectIndex($container),
-        new ScriptRunner($root, ['php']),
-    );
+    return projectWithModulesContext($root);
 }
 
 function writeController(string $path, string $namespace, string $class, string $method): void

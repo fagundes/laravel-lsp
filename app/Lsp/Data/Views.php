@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModulePaths;
 use Illuminate\Support\Collection;
 
 class Views implements DataProvider
@@ -54,7 +55,13 @@ class Views implements DataProvider
     public function patterns(): array
     {
         return [
-            '**/{resources,Modules/*/resources}/views/**/*.blade.php',
+            'resources/views/**/*.blade.php',
+            ...ModulePaths::patterns(
+                $this->project,
+                'views',
+                ['resources/views'],
+                '**/*.blade.php',
+            ),
         ];
     }
 }

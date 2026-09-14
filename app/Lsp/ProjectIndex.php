@@ -18,6 +18,7 @@ use App\Lsp\Data\InertiaViews;
 use App\Lsp\Data\Middleware;
 use App\Lsp\Data\MixManifest;
 use App\Lsp\Data\Models;
+use App\Lsp\Data\Modules;
 use App\Lsp\Data\Paths;
 use App\Lsp\Data\Routes;
 use App\Lsp\Data\Tests;
@@ -37,25 +38,26 @@ class ProjectIndex
      * @var array<string, class-string<DataProvider>>
      */
     protected array $providers = [
-        'appBindings' => AppBindings::class,
-        'assets' => Assets::class,
-        'auth' => Auth::class,
-        'bladeComponents' => BladeComponents::class,
-        'configs' => Configs::class,
-        'controllers' => Controllers::class,
+        'appBindings'           => AppBindings::class,
+        'assets'                => Assets::class,
+        'auth'                  => Auth::class,
+        'bladeComponents'       => BladeComponents::class,
+        'configs'               => Configs::class,
+        'controllers'           => Controllers::class,
         'customBladeDirectives' => CustomBladeDirectives::class,
-        'debugInfo' => DebugInfo::class,
-        'env' => Env::class,
-        'inertiaViews' => InertiaViews::class,
-        'middleware' => Middleware::class,
-        'mixManifest' => MixManifest::class,
-        'models' => Models::class,
-        'paths' => Paths::class,
-        'routes' => Routes::class,
-        'tests' => Tests::class,
-        'translations' => Translations::class,
-        'viewNamespaces' => ViewNamespaces::class,
-        'views' => Views::class,
+        'debugInfo'             => DebugInfo::class,
+        'env'                   => Env::class,
+        'inertiaViews'          => InertiaViews::class,
+        'middleware'            => Middleware::class,
+        'mixManifest'           => MixManifest::class,
+        'models'                => Models::class,
+        'modules'               => Modules::class,
+        'paths'                 => Paths::class,
+        'routes'                => Routes::class,
+        'tests'                 => Tests::class,
+        'translations'          => Translations::class,
+        'viewNamespaces'        => ViewNamespaces::class,
+        'views'                 => Views::class,
     ];
 
     /**
@@ -178,6 +180,16 @@ class ProjectIndex
     }
 
     /**
+     * Get the Laravel modules context.
+     *
+     * @return array<string, mixed>
+     */
+    public function modules(): array
+    {
+        return $this->get(__FUNCTION__);
+    }
+
+    /**
      * Get the paths provider.
      */
     public function paths(): Collection
@@ -256,7 +268,7 @@ class ProjectIndex
      */
     protected function load(string $name): mixed
     {
-        if (! isset($this->providers[$name])) {
+        if (!isset($this->providers[$name])) {
             throw new DataProviderNotFoundException($name);
         }
 

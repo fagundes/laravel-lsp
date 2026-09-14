@@ -25,26 +25,21 @@ $vendor = collect(glob(base_path('vendor/**/**/config/*.php')))->map(fn (
     $path,
 ]);
 
-$moduleConfigPath = config('modules.paths.generator.config.path', 'config');
-$modulesRoot = config('modules.paths.modules', base_path('Modules'));
+$moduleContext = LspHelper::modulesContext(
+    __LARAVEL_LSP_MODULES_ROOT__,
+    __LARAVEL_LSP_MODULES_ENABLED__,
+);
 
-$moduleDirectories = app()->bound('modules')
-    ? collect(app('modules')->all())->map(fn ($module) => [
-        'name' => $module->getName(),
-        'path' => $module->getPath(),
-    ])
-    : collect(is_string($modulesRoot) && is_dir($modulesRoot) ? File::directories($modulesRoot) : [])
-        ->map(fn (string $path) => [
-            'name' => basename($path),
-            'path' => $path,
-        ]);
-
-$modules = $moduleDirectories->flatMap(function (array $module) use ($moduleConfigPath) {
+$modules = collect($moduleContext['modules'])->flatMap(function (array $module) {
+    $modulePath = LspHelper::absolutePath($module['path']);
     $directories = collect([
-        is_string($moduleConfigPath) ? $module['path'] . DIRECTORY_SEPARATOR . $moduleConfigPath : null,
-        $module['path'] . DIRECTORY_SEPARATOR . 'config',
-        $module['path'] . DIRECTORY_SEPARATOR . 'Config',
-    ])->filter(fn ($path) => is_string($path) && is_dir($path))->unique();
+        $module['paths']['config'] ?? null,
+        'config',
+        'Config',
+    ])->filter(fn ($path) => is_string($path) && $path !== '')
+        ->map(fn (string $path) => $modulePath . DIRECTORY_SEPARATOR . $path)
+        ->filter(fn (string $path) => is_dir($path))
+        ->unique();
 
     return $directories->flatMap(fn (string $directory) => collect(File::files($directory))
         ->filter(fn (SplFileInfo $file) => $file->getExtension() === 'php')

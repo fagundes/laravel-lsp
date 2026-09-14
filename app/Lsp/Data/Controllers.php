@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModulePaths;
 use Illuminate\Support\Collection;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
@@ -30,10 +31,12 @@ class Controllers implements DataProvider
         return [
             'app/Http/Controllers/*.php',
             'app/Http/Controllers/**/*.php',
-            'Modules/*/app/Http/Controllers/*.php',
-            'Modules/*/app/Http/Controllers/**/*.php',
-            'Modules/*/Http/Controllers/*.php',
-            'Modules/*/Http/Controllers/**/*.php',
+            ...ModulePaths::patterns(
+                $this->project,
+                'controllers',
+                ['app/Http/Controllers', 'Http/Controllers'],
+                '{,*,**/*}.php',
+            ),
         ];
     }
 
@@ -66,8 +69,11 @@ class Controllers implements DataProvider
     {
         return collect([
             $this->project->path('app/Http/Controllers'),
-            ...(glob($this->project->path('Modules/*/app/Http/Controllers'), GLOB_ONLYDIR) ?: []),
-            ...(glob($this->project->path('Modules/*/Http/Controllers'), GLOB_ONLYDIR) ?: []),
+            ...ModulePaths::directories(
+                $this->project,
+                'controllers',
+                ['app/Http/Controllers', 'Http/Controllers'],
+            ),
         ])->filter(fn (string $path): bool => is_dir($path))
             ->unique()
             ->values()

@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModulePaths;
 
 class BladeComponents implements DataProvider
 {
@@ -56,7 +57,13 @@ class BladeComponents implements DataProvider
     public function patterns(): array
     {
         return [
-            '**/{resources,Modules/*/resources}/views/**/*.blade.php',
+            'resources/views/**/*.blade.php',
+            ...ModulePaths::patterns(
+                $this->project,
+                'views',
+                ['resources/views'],
+                '**/*.blade.php',
+            ),
             'app/View/Components/{,*,**/*}.php',
         ];
     }

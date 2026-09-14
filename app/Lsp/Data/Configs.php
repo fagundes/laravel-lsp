@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModulePaths;
 
 class Configs implements DataProvider
 {
@@ -22,7 +23,13 @@ class Configs implements DataProvider
      */
     public function template(): string
     {
-        return file_get_contents(__DIR__ . '/Templates/configs.php') ?: '';
+        $template = file_get_contents(__DIR__ . '/Templates/configs.php') ?: '';
+
+        return str_replace(
+            ['__LARAVEL_LSP_MODULES_ROOT__', '__LARAVEL_LSP_MODULES_ENABLED__'],
+            [var_export($this->project->modulesRoot(), true), $this->project->modulesEnabled() ? 'true' : 'false'],
+            $template,
+        );
     }
 
     /**
@@ -69,8 +76,12 @@ class Configs implements DataProvider
     {
         return [
             'config/{,*,**/*}.php',
-            'Modules/*/config/{,*,**/*}.php',
-            'Modules/*/Config/{,*,**/*}.php',
+            ...ModulePaths::patterns(
+                $this->project,
+                'config',
+                ['config', 'Config'],
+                '{,*,**/*}.php',
+            ),
             '.env',
         ];
     }

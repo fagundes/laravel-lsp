@@ -4,7 +4,7 @@ use App\Lsp\Support\ModuleProviderPatterns;
 use App\Lsp\Support\Pattern;
 
 test('adds modern and legacy module provider watcher patterns', function () {
-    $patterns = ModuleProviderPatterns::merge([
+    $patterns = ModuleProviderPatterns::merge(projectWithModulesContext('/workspace'), [
         'app/Providers/{,*,**/*}.php',
     ]);
 
@@ -15,7 +15,7 @@ test('adds modern and legacy module provider watcher patterns', function () {
 });
 
 test('does not match files outside module provider directories', function () {
-    $patterns = ModuleProviderPatterns::merge([]);
+    $patterns = ModuleProviderPatterns::merge(projectWithModulesContext('/workspace'), []);
 
     expect(Pattern::matchesAny('Modules/Blog/app/Models/Post.php', $patterns))->toBeFalse()
         ->and(Pattern::matchesAny('vendor/acme/package/src/Providers/PackageServiceProvider.php', $patterns))->toBeFalse();

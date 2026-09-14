@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModulePaths;
 use App\Lsp\Support\ModuleProviderPatterns;
 
 class ViewNamespaces implements DataProvider
@@ -67,10 +68,16 @@ class ViewNamespaces implements DataProvider
      */
     public function patterns(): array
     {
-        return ModuleProviderPatterns::merge([
+        return ModuleProviderPatterns::merge($this->project, [
             'app/Providers/{,*,**/*}.php',
             'config/view.php',
-            '**/{resources,Modules/*/resources}/views/**/*.blade.php',
+            'resources/views/**/*.blade.php',
+            ...ModulePaths::patterns(
+                $this->project,
+                'views',
+                ['resources/views'],
+                '**/*.blade.php',
+            ),
         ]);
     }
 }

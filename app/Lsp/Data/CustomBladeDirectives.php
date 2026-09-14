@@ -63,7 +63,7 @@ class CustomBladeDirectives implements DataProvider
      */
     public function patterns(): array
     {
-        return ModuleProviderPatterns::merge([
+        return ModuleProviderPatterns::merge($this->project, [
             'app/{,*,**/*}Provider.php',
         ]);
     }

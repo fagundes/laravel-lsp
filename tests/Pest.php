@@ -1,5 +1,10 @@
 <?php
 
+use App\Lsp\Project;
+use App\Lsp\ProjectIndex;
+use App\Lsp\ScriptRunner;
+use App\Lsp\Support\FileUri;
+use Illuminate\Container\Container;
 use Tests\TestCase;
 
 /*
@@ -45,3 +50,57 @@ uses(TestCase::class)->in('Unit');
 // {
 //     // ..
 // }
+
+/**
+ * Build a project with a deterministic modules context for unit tests.
+ *
+ * @param  array<string, mixed>  $init
+ * @param  array<string, mixed>|null  $context
+ */
+function projectWithModulesContext(string $root, array $init = [], ?array $context = null): Project
+{
+    $container = new Container;
+    $moduleRoot = $init['modulesRoot'] ?? 'Modules';
+    $absoluteRoot = str_starts_with($moduleRoot, DIRECTORY_SEPARATOR) ? $moduleRoot : $root . '/' . $moduleRoot;
+    $modules = collect(glob($absoluteRoot . '/*', GLOB_ONLYDIR) ?: [])->map(fn (string $path): array => [
+        'name'       => basename($path),
+        'studlyName' => basename($path),
+        'namespace'  => 'Modules\\' . basename($path),
+        'path'       => trim($moduleRoot, ' /\\') . '/' . basename($path),
+        'enabled'    => true,
+        'paths'      => [
+            'models'      => 'app/Models',
+            'controllers' => 'app/Http/Controllers',
+            'providers'   => 'app/Providers',
+            'config'      => 'config',
+            'views'       => 'resources/views',
+        ],
+    ])->values()->all();
+    $context ??= [
+        'enabled'   => ($init['modulesEnabled'] ?? true) === true,
+        'root'      => trim($moduleRoot, ' /\\'),
+        'namespace' => 'Modules',
+        'modules'   => $modules,
+    ];
+    $index = new class($container, $context) extends ProjectIndex
+    {
+        public function __construct(Container $container, protected array $context)
+        {
+            parent::__construct($container);
+        }
+
+        public function modules(): array
+        {
+            return $this->context;
+        }
+    };
+    $project = new Project(
+        FileUri::fromPath($root),
+        $init,
+        $index,
+        new ScriptRunner($root, [PHP_BINARY]),
+    );
+    $container->instance(Project::class, $project);
+
+    return $project;
+}

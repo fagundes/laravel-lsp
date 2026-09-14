@@ -6,6 +6,7 @@ namespace App\Lsp\Data;
 
 use App\Lsp\Contracts\DataProvider;
 use App\Lsp\Project;
+use App\Lsp\Support\ModulePaths;
 use App\Lsp\Support\ModuleProviderPatterns;
 
 class Auth implements DataProvider
@@ -23,7 +24,13 @@ class Auth implements DataProvider
      */
     public function template(): string
     {
-        return file_get_contents(__DIR__ . '/Templates/auth.php') ?: '';
+        $template = file_get_contents(__DIR__ . '/Templates/auth.php') ?: '';
+
+        return str_replace(
+            ['__LARAVEL_LSP_MODEL_PATHS__', '__LARAVEL_LSP_MODULES_ROOT__', '__LARAVEL_LSP_MODULES_ENABLED__'],
+            [var_export($this->project->modelPaths(), true), var_export($this->project->modulesRoot(), true), $this->project->modulesEnabled() ? 'true' : 'false'],
+            $template,
+        );
     }
 
     /**
@@ -56,11 +63,16 @@ class Auth implements DataProvider
      */
     public function patterns(): array
     {
-        return ModuleProviderPatterns::merge([
+        return ModuleProviderPatterns::merge($this->project, [
             'app/Providers/{,*,**/*}.php',
-            'app/Models/{,*,**/*}.php',
+            ...collect($this->project->modelPaths())->map(fn (string $path): string => "{$path}/{,*,**/*}.php"),
             'app/Policies/{,*,**/*}.php',
-            'Modules/*/{app/Models,Entities,Models}/{,*,**/*}.php',
+            ...ModulePaths::patterns(
+                $this->project,
+                'models',
+                ['app/Models', 'Entities', 'Models'],
+                '{,*,**/*}.php',
+            ),
         ]);
     }
 }

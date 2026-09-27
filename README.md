@@ -123,10 +123,13 @@ Editor clients pass configuration through the LSP `initializationOptions` object
 | `memoryLimit`           | `string`   | `"512M"`                                | Set the LSP server process `memory_limit` during initialize. Use PHP shorthand such as `"512M"`, `"1G"`, or `"-1"`. |
 | `definitionProvider`    | `boolean`  | `true`                                  | Advertise definition support to the editor. Definitions are resolved from enabled document link options. |
 | `modelPaths`            | `string[]` | `["app/Models"]`                        | Set project-relative application directories used to discover Eloquent models. Module model paths are added separately when module discovery is enabled. |
+| `mixinPaths`            | `string[]` | `[]`                                    | Load PHP files or directories that declare `@mixin` target classes outside Composer's autoload, such as `_ide_helper_models.php`. Relative paths use the Laravel project root; directories are searched recursively. |
 | `modulesEnabled`        | `boolean`  | `true`                                  | Discover modules and include their paths in project indexing and file watching.                                  |
 | `modulesRoot`           | `string`   | `""`                                    | Set a project-relative fallback module root. When empty, the server uses the registered module repository or checks `Modules`. |
 | `pestGenerateDocBlocks` | `boolean`  | `true`                                  | Generate Pest helper docblocks and keep them updated when tests or Composer autoload files change.       |
 | `pestHelperFilePath`    | `string`   | `"storage/framework/testing/_pest.php"` | Set the Pest helper output path relative to the Laravel project root.                                    |
+
+Configured `mixinPaths` are loaded only by the isolated project-data process used to inspect mixin targets; they are not added to Composer's autoload. Relative configured paths participate in file watching, so changing an IDE Helper file regenerates `vendor/_laravel_ide/_mixin_helpers.php`. Absolute paths are loaded during generation but cannot be watched through the workspace-relative LSP watcher.
 
 The `phpEnvironment` option controls which PHP command is used when the server runs project data scripts. It accepts these values:
 

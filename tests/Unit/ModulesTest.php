@@ -25,6 +25,7 @@ test('reads module discovery initialization options', function () {
         'modulesEnabled' => false,
         'modulesRoot'    => 'packages/modules',
         'modelPaths'     => ['app/Domain', '', 'app/Domain'],
+        'mixinPaths'     => ['_ide_helper_models.php', '', '_ide_helper_models.php'],
     ]);
 
     expect($defaults->modulesEnabled())->toBeTrue()
@@ -32,7 +33,8 @@ test('reads module discovery initialization options', function () {
         ->and($defaults->modelPaths())->toBe(['app/Models'])
         ->and($configured->modulesEnabled())->toBeFalse()
         ->and($configured->modulesRoot())->toBe('packages/modules')
-        ->and($configured->modelPaths())->toBe(['app/Domain']);
+        ->and($configured->modelPaths())->toBe(['app/Domain'])
+        ->and($configured->mixinPaths())->toBe(['_ide_helper_models.php']);
 });
 
 test('parses module context and returns an empty context when disabled', function () {

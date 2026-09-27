@@ -3,6 +3,20 @@
 use phpDocumentor\Reflection\DocBlockFactory;
 
 $targets = collect(__LARAVEL_LSP_MIXIN_TARGETS__)->unique()->values();
+$files = collect(__LARAVEL_LSP_MIXIN_FILES__)->unique()->values();
+
+$files->each(function (mixed $file): void {
+    if (!is_string($file) || !is_file($file)) {
+        return;
+    }
+
+    try {
+        require_once $file;
+    } catch (Throwable $e) {
+        report($e);
+    }
+});
+
 $factory = class_exists(DocBlockFactory::class) ? DocBlockFactory::createInstance() : null;
 
 $docblocks = new class($factory)

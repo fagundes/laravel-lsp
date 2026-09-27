@@ -68,6 +68,21 @@ final class Project
     }
 
     /**
+     * Get PHP files or directories that may declare mixin targets outside Composer's autoload.
+     *
+     * @return array<int, string>
+     */
+    public function mixinPaths(): array
+    {
+        return collect($this->data('mixinPaths', []))
+            ->filter(fn (mixed $path): bool => is_string($path) && trim($path) !== '')
+            ->map(fn (string $path): string => str_replace('\\', '/', trim($path)))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * Get the configured LSP process memory limit.
      */
     public function memoryLimit(): string

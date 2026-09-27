@@ -37,6 +37,7 @@ class MixinHelperWatcher implements FileWatcher
             ...collect($this->sourceDirectories())
                 ->map(fn (string $directory): string => $directory . '/{,*,**/*}.php')
                 ->all(),
+            ...$this->additionalMixinPatterns(),
             'vendor/composer/autoload_*.php',
         ];
     }
@@ -204,7 +205,11 @@ class MixinHelperWatcher implements FileWatcher
         }
 
         $template = file_get_contents(__DIR__ . '/../Data/Templates/mixin-targets.php') ?: '';
-        $code = str_replace('__LARAVEL_LSP_MIXIN_TARGETS__', var_export($targets, true), $template);
+        $code = str_replace(
+            ['__LARAVEL_LSP_MIXIN_TARGETS__', '__LARAVEL_LSP_MIXIN_FILES__'],
+            [var_export($targets, true), var_export($this->additionalMixinFiles(), true)],
+            $template,
+        );
         $result = $this->project->scripts->json($code);
 
         return is_array($result) ? $result : [];
@@ -378,6 +383,72 @@ class MixinHelperWatcher implements FileWatcher
             ->filter(fn (string $entry): bool => is_dir($this->project->path($entry)))
             ->values()
             ->all();
+    }
+
+    /**
+     * Resolve configured files that may declare mixin targets outside Composer's autoload.
+     *
+     * @return array<int, string>
+     */
+    protected function additionalMixinFiles(): array
+    {
+        return collect($this->project->mixinPaths())
+            ->flatMap(function (string $configuredPath): array {
+                $path = $this->absolutePath($configuredPath);
+
+                if (is_file($path)) {
+                    return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'php' ? [$path] : [];
+                }
+
+                if (!is_dir($path)) {
+                    return [];
+                }
+
+                return collect((new Finder)
+                    ->files()
+                    ->name('*.php')
+                    ->size('< 2M')
+                    ->ignoreUnreadableDirs()
+                    ->in($path))
+                    ->map(fn ($file): string => $file->getRealPath())
+                    ->filter()
+                    ->all();
+            })
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Get watcher patterns for configured paths inside the project.
+     *
+     * @return array<int, string>
+     */
+    protected function additionalMixinPatterns(): array
+    {
+        return collect($this->project->mixinPaths())
+            ->reject(fn (string $path): bool => $this->isAbsolutePath($path))
+            ->map(function (string $path): string {
+                $path = trim(str_replace('\\', '/', $path), '/');
+
+                return is_dir($this->project->path($path))
+                    ? $path . '/{,*,**/*}.php'
+                    : $path;
+            })
+            ->filter(fn (string $path): bool => $path !== '')
+            ->values()
+            ->all();
+    }
+
+    protected function absolutePath(string $path): string
+    {
+        return $this->isAbsolutePath($path) ? $path : $this->project->path($path);
+    }
+
+    protected function isAbsolutePath(string $path): bool
+    {
+        return str_starts_with($path, DIRECTORY_SEPARATOR)
+            || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
     }
 
     /**

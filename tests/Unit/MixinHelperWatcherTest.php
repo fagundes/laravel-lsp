@@ -10,13 +10,13 @@ use Illuminate\Container\Container;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 
-function mixinWatcher(string $root): MixinHelperWatcher
+function mixinWatcher(string $root, array $init = [], ?string $scriptRoot = null): MixinHelperWatcher
 {
     $project = new Project(
         FileUri::fromPath($root),
-        [],
+        $init,
         new ProjectIndex(new Container),
-        new ScriptRunner($root, [PHP_BINARY]),
+        new ScriptRunner($scriptRoot ?? $root, [PHP_BINARY]),
     );
 
     return new class($project) extends MixinHelperWatcher
@@ -94,6 +94,63 @@ test('reflects real methods from a mixin target in the Laravel runtime', functio
 
     expect($reflected)->toHaveKey($target)
         ->and(collect($reflected[$target]['methods'])->pluck('name'))->toContain('map');
+});
+
+test('reflects a mixin target declared in a configured file outside Composer autoload', function () {
+    $root = sys_get_temp_dir() . '/lsp-mixin-includes-' . getmypid() . '-' . bin2hex(random_bytes(4));
+    $helper = $root . '/ide-helper/_ide_helper_models.php';
+    $target = 'IdeHelperFixtures\\ConfiguredModel';
+
+    try {
+        writeMixinFixture($helper, <<<'PHP'
+        <?php
+
+        namespace IdeHelperFixtures;
+
+        /** @property-read string $display_name */
+        class ConfiguredModel
+        {
+            public function fromIdeHelper(int $id): ?string {}
+        }
+        PHP);
+
+        expect(mixinWatcher(base_path())->reflected([$target]))->toBe([$target => null]);
+
+        $reflected = mixinWatcher(base_path(), ['mixinPaths' => [$helper]])->reflected([$target]);
+
+        expect($reflected)->toHaveKey($target)
+            ->and($reflected[$target]['tags'])->toContain('@property-read string $display_name')
+            ->and(collect($reflected[$target]['methods'])->pluck('name'))->toContain('fromIdeHelper');
+    } finally {
+        (new Filesystem)->deleteDirectory($root);
+    }
+});
+
+test('expands configured mixin directories and watches relative paths', function () {
+    $root = sys_get_temp_dir() . '/lsp-mixin-directory-' . getmypid() . '-' . bin2hex(random_bytes(4));
+    $target = 'IdeHelperDirectoryFixtures\\ConfiguredModel';
+
+    try {
+        writeMixinFixture($root . '/support/ide-helper/models.php', <<<'PHP'
+        <?php
+
+        namespace IdeHelperDirectoryFixtures;
+
+        class ConfiguredModel
+        {
+            public function fromDirectory(): bool {}
+        }
+        PHP);
+
+        $watcher = mixinWatcher($root, ['mixinPaths' => ['support/ide-helper']], base_path());
+        $reflected = $watcher->reflected([$target]);
+
+        expect($reflected)->toHaveKey($target)
+            ->and(collect($reflected[$target]['methods'])->pluck('name'))->toContain('fromDirectory')
+            ->and(Pattern::matchesAny('support/ide-helper/models.php', $watcher->patterns()))->toBeTrue();
+    } finally {
+        (new Filesystem)->deleteDirectory($root);
+    }
 });
 
 test('renders reflected members and keeps the original mixin tag', function () {

@@ -6,7 +6,15 @@ $targets = collect(__LARAVEL_LSP_MIXIN_TARGETS__)->unique()->values();
 $files = collect(__LARAVEL_LSP_MIXIN_FILES__)->unique()->values();
 
 $files->each(function (mixed $file): void {
-    if (!is_string($file) || !is_file($file)) {
+    if (!is_string($file)) {
+        return;
+    }
+
+    $absolute = str_starts_with($file, DIRECTORY_SEPARATOR)
+        || preg_match('/^[A-Za-z]:[\\\\\/]/', $file) === 1;
+    $file = $absolute ? $file : getcwd() . DIRECTORY_SEPARATOR . $file;
+
+    if (!is_file($file)) {
         return;
     }
 

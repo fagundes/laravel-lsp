@@ -177,19 +177,73 @@ class MixinHelperWatcher implements FileWatcher
             return null;
         }
 
-        preg_match_all('/@mixin\s+\\\\?([A-Za-z_\x80-\xff][A-Za-z0-9_\\\\\x80-\xff]*)/', substr($beforeClass, $start, $end - $start), $matches);
+        preg_match_all('/@mixin\s+(\\\\?[A-Za-z_\x80-\xff][A-Za-z0-9_\\\\\x80-\xff]*)/', substr($beforeClass, $start, $end - $start), $matches);
         $targets = array_values(array_unique($matches[1] ?? []));
 
         if ($targets === []) {
             return null;
         }
 
-        preg_match('/(?:^|\n)namespace\s+([A-Za-z_\x80-\xff][A-Za-z0-9_\\\\\x80-\xff]*)\s*;/', $content, $namespace);
+        preg_match('/(?:^|\n)namespace\s+([A-Za-z_\x80-\xff][A-Za-z0-9_\\\\\x80-\xff]*)\s*[;{]/', $content, $namespace);
+        $namespace = $namespace[1] ?? '';
+        $imports = $this->imports($beforeClass);
 
         return [
-            'class'   => isset($namespace[1]) ? $namespace[1] . '\\' . $class[1][0] : $class[1][0],
-            'targets' => $targets,
+            'class'   => $namespace !== '' ? $namespace . '\\' . $class[1][0] : $class[1][0],
+            'targets' => array_map(
+                fn (string $target): string => $this->resolveMixinTarget($target, $namespace, $imports),
+                $targets,
+            ),
         ];
+    }
+
+    /**
+     * Get class imports declared before the host class.
+     *
+     * @return array<string, string>
+     */
+    protected function imports(string $content): array
+    {
+        preg_match_all(
+            '/(?:^|\n)[ \t]*use\s+([A-Za-z_\x80-\xff][A-Za-z0-9_\\\\\x80-\xff]*)(?:\s+as\s+([A-Za-z_\x80-\xff][A-Za-z0-9_\x80-\xff]*))?\s*;/i',
+            $content,
+            $matches,
+            PREG_SET_ORDER,
+        );
+
+        $imports = [];
+
+        foreach ($matches as $match) {
+            $class = $match[1];
+            $alias = ($match[2] ?? '') !== '' ? $match[2] : basename(str_replace('\\', '/', $class));
+            $imports[$alias] = $class;
+        }
+
+        return $imports;
+    }
+
+    /**
+     * Resolve a PHPDoc class name in the context of its host class.
+     *
+     * @param  array<string, string>  $imports
+     */
+    protected function resolveMixinTarget(string $target, string $namespace, array $imports): string
+    {
+        if (str_starts_with($target, '\\')) {
+            return ltrim($target, '\\');
+        }
+
+        [$first, $remainder] = array_pad(explode('\\', $target, 2), 2, null);
+
+        if (isset($imports[$first])) {
+            return $imports[$first] . ($remainder === null ? '' : '\\' . $remainder);
+        }
+
+        if (!str_contains($target, '\\')) {
+            return $namespace === '' ? $target : $namespace . '\\' . $target;
+        }
+
+        return $target;
     }
 
     /**
@@ -397,7 +451,9 @@ class MixinHelperWatcher implements FileWatcher
                 $path = $this->absolutePath($configuredPath);
 
                 if (is_file($path)) {
-                    return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'php' ? [$path] : [];
+                    return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'php'
+                        ? [$this->scriptPath($path)]
+                        : [];
                 }
 
                 if (!is_dir($path)) {
@@ -410,13 +466,26 @@ class MixinHelperWatcher implements FileWatcher
                     ->size('< 2M')
                     ->ignoreUnreadableDirs()
                     ->in($path))
-                    ->map(fn ($file): string => $file->getRealPath())
+                    ->map(fn ($file): string => $this->scriptPath($file->getRealPath()))
                     ->filter()
                     ->all();
             })
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * Use a project-relative path when the PHP environment maps the project elsewhere.
+     */
+    protected function scriptPath(string $path): string
+    {
+        $root = str_replace('\\', '/', rtrim(realpath($this->project->path()) ?: $this->project->path(), '/\\'));
+        $path = str_replace('\\', '/', realpath($path) ?: $path);
+
+        return str_starts_with($path, $root . '/')
+            ? substr($path, strlen($root) + 1)
+            : $path;
     }
 
     /**

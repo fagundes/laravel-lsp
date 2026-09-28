@@ -31,6 +31,11 @@ function mixinWatcher(string $root, array $init = [], ?string $scriptRoot = null
             return $this->reflect($targets);
         }
 
+        public function files(): array
+        {
+            return $this->additionalMixinFiles();
+        }
+
         public function tags(string $target, ?array $model, ?array $reflected): array
         {
             return $this->targetTags($target, $model, $reflected);
@@ -88,6 +93,40 @@ test('discovers mixin hosts outside ignored project directories', function () {
     }
 });
 
+test('resolves relative and imported mixin targets in the host namespace', function () {
+    $root = sys_get_temp_dir() . '/lsp-mixin-namespaces-' . getmypid() . '-' . bin2hex(random_bytes(4));
+
+    try {
+        writeMixinFixture($root . '/app/Models/User.php', <<<'PHP'
+        <?php
+
+        namespace Modules\Autentica\Models;
+
+        use Illuminate\Database\Eloquent\Model;
+
+        /** @mixin IdeHelperUser */
+        class User {}
+        PHP);
+        writeMixinFixture($root . '/app/Facades/Service.php', <<<'PHP'
+        <?php
+
+        namespace App\Facades;
+
+        use Support\IdeHelperService as ServiceMixin;
+
+        /** @mixin ServiceMixin */
+        class Service {}
+        PHP);
+
+        expect(mixinWatcher($root)->hosts())->toBe([
+            'App\Facades\Service'           => ['Support\IdeHelperService'],
+            'Modules\Autentica\Models\User' => ['Modules\Autentica\Models\IdeHelperUser'],
+        ]);
+    } finally {
+        (new Filesystem)->deleteDirectory($root);
+    }
+});
+
 test('reflects real methods from a mixin target in the Laravel runtime', function () {
     $target = Collection::class;
     $reflected = mixinWatcher(base_path())->reflected([$target]);
@@ -127,11 +166,12 @@ test('reflects a mixin target declared in a configured file outside Composer aut
 });
 
 test('expands configured mixin directories and watches relative paths', function () {
-    $root = sys_get_temp_dir() . '/lsp-mixin-directory-' . getmypid() . '-' . bin2hex(random_bytes(4));
+    $directory = 'storage/framework/lsp-mixin-directory-' . getmypid() . '-' . bin2hex(random_bytes(4));
+    $root = base_path();
     $target = 'IdeHelperDirectoryFixtures\\ConfiguredModel';
 
     try {
-        writeMixinFixture($root . '/support/ide-helper/models.php', <<<'PHP'
+        writeMixinFixture($root . '/' . $directory . '/models.php', <<<'PHP'
         <?php
 
         namespace IdeHelperDirectoryFixtures;
@@ -142,14 +182,15 @@ test('expands configured mixin directories and watches relative paths', function
         }
         PHP);
 
-        $watcher = mixinWatcher($root, ['mixinPaths' => ['support/ide-helper']], base_path());
+        $watcher = mixinWatcher($root, ['mixinPaths' => [$directory]]);
         $reflected = $watcher->reflected([$target]);
 
         expect($reflected)->toHaveKey($target)
             ->and(collect($reflected[$target]['methods'])->pluck('name'))->toContain('fromDirectory')
-            ->and(Pattern::matchesAny('support/ide-helper/models.php', $watcher->patterns()))->toBeTrue();
+            ->and($watcher->files())->toBe([$directory . '/models.php'])
+            ->and(Pattern::matchesAny($directory . '/models.php', $watcher->patterns()))->toBeTrue();
     } finally {
-        (new Filesystem)->deleteDirectory($root);
+        (new Filesystem)->deleteDirectory($root . '/' . $directory);
     }
 });
 

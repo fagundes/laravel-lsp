@@ -83,6 +83,14 @@ final class Project
     }
 
     /**
+     * Determine if Eloquent model metadata should be inspected from the database.
+     */
+    public function eloquentDatabaseInspection(): bool
+    {
+        return $this->boolean('eloquentDatabaseInspection', true);
+    }
+
+    /**
      * Get the configured LSP process memory limit.
      */
     public function memoryLimit(): string

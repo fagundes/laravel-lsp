@@ -45,6 +45,14 @@ test('resolves modern and legacy model directories from conventional modules', f
     }
 });
 
+test('skips model data and watchers when database inspection is disabled', function () {
+    $project = projectWithModulesContext('/workspace', ['eloquentDatabaseInspection' => false]);
+    $provider = new Models($project);
+
+    expect($provider->get())->toBe([])
+        ->and($provider->patterns())->toBe([]);
+});
+
 test('models and auth watch module model directories', function () {
     $project = moduleModelsProject('/workspace');
     $modelPatterns = (new Models($project))->patterns();

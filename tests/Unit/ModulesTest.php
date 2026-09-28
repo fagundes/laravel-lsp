@@ -22,16 +22,19 @@ beforeEach(function () {
 test('reads module discovery initialization options', function () {
     $defaults = projectWithModulesContext('/workspace');
     $configured = projectWithModulesContext('/workspace', [
-        'modulesEnabled' => false,
-        'modulesRoot'    => 'packages/modules',
-        'modelPaths'     => ['app/Domain', '', 'app/Domain'],
-        'mixinPaths'     => ['_ide_helper_models.php', '', '_ide_helper_models.php'],
+        'modulesEnabled'             => false,
+        'modulesRoot'                => 'packages/modules',
+        'modelPaths'                 => ['app/Domain', '', 'app/Domain'],
+        'mixinPaths'                 => ['_ide_helper_models.php', '', '_ide_helper_models.php'],
+        'eloquentDatabaseInspection' => false,
     ]);
 
     expect($defaults->modulesEnabled())->toBeTrue()
+        ->and($defaults->eloquentDatabaseInspection())->toBeTrue()
         ->and($defaults->modulesRoot())->toBeNull()
         ->and($defaults->modelPaths())->toBe(['app/Models'])
         ->and($configured->modulesEnabled())->toBeFalse()
+        ->and($configured->eloquentDatabaseInspection())->toBeFalse()
         ->and($configured->modulesRoot())->toBe('packages/modules')
         ->and($configured->modelPaths())->toBe(['app/Domain'])
         ->and($configured->mixinPaths())->toBe(['_ide_helper_models.php']);

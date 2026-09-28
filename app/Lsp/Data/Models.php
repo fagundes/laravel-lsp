@@ -52,6 +52,10 @@ class Models implements DataProvider
      */
     public function get(): array
     {
+        if (!$this->project->eloquentDatabaseInspection()) {
+            return [];
+        }
+
         $data = $this->project->scripts->json($this->template());
 
         return $this->parse(is_array($data) ? $data : []);
@@ -64,6 +68,10 @@ class Models implements DataProvider
      */
     public function patterns(): array
     {
+        if (!$this->project->eloquentDatabaseInspection()) {
+            return [];
+        }
+
         return [
             ...collect($this->project->modelPaths())->map(fn (string $path): string => "{$path}/{,*,**/*}.php"),
             ...ModulePaths::patterns(

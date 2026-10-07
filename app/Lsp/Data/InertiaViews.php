@@ -36,7 +36,10 @@ class InertiaViews implements DataProvider
      */
     public function parse(array $data): array
     {
-        $paths = $this->normalizePagePaths($data);
+        $paths = $this->normalizePagePaths($data)
+            ->merge($this->modulePagePaths())
+            ->unique()
+            ->values();
         $extensions = $this->normalizePageExtensions($data);
 
         return [
@@ -67,11 +70,20 @@ class InertiaViews implements DataProvider
      */
     public function patterns(): array
     {
-        return [
+        $patterns = [
             'resources/js/Pages/{*,**/*}',
             'resources/js/pages/{*,**/*}',
             'config/{,*,**/*}.php',
         ];
+
+        $moduleRoot = $this->project->index->modules()['root'] ?? 'Modules';
+
+        if (($this->project->index->modules()['enabled'] ?? false) === true) {
+            $patterns[] = trim($moduleRoot, '/ ') . '/*/resources/js/Pages/{*,**/*}';
+            $patterns[] = trim($moduleRoot, '/ ') . '/*/resources/js/pages/{*,**/*}';
+        }
+
+        return array_values(array_unique($patterns));
     }
 
     /**
@@ -103,6 +115,41 @@ class InertiaViews implements DataProvider
             ->values();
 
         return $extensions->isEmpty() ? collect(['vue']) : $extensions;
+    }
+
+    /**
+     * Get the conventional Inertia page paths for discovered modules.
+     *
+     * Module packages commonly keep their frontend pages under either
+     * `resources/js/Pages` or `resources/js/pages`, mirroring Laravel's
+     * root-level conventions. These paths are added in addition to any
+     * paths returned by the application's Inertia configuration.
+     *
+     * @return Collection<int, string>
+     */
+    protected function modulePagePaths(): Collection
+    {
+        $context = $this->project->index->modules();
+
+        if (($context['enabled'] ?? false) !== true) {
+            return collect();
+        }
+
+        return collect($context['modules'] ?? [])
+            ->filter(fn (mixed $module): bool => is_array($module) && ($module['enabled'] ?? true) === true)
+            ->flatMap(function (array $module): array {
+                $path = trim((string) ($module['path'] ?? ''), '/ ');
+
+                if ($path === '') {
+                    return [];
+                }
+
+                return [
+                    $path . '/resources/js/Pages',
+                    $path . '/resources/js/pages',
+                ];
+            })
+            ->values();
     }
 
     /**
